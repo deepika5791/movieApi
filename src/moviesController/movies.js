@@ -1,5 +1,81 @@
 const fs = require("fs");
-const MoviesStats = (req, res) => {
+
+const allMovies = (req, res) => {
+  try {
+    fs.readFile("movie.json", "utf-8", (err, data) => {
+      if (err) {
+        return res.status(500).json({ message: "Error reading data" });
+      }
+      let movies = JSON.parse(data);
+      const { title, director, genre, year, cast, by, order } = req.query;
+      if (title) {
+        movies = movies.filter(
+          (m) => m.title && m.title.toLowerCase().includes(title.toLowerCase())
+        );
+        if (movies.length === 0) {
+          return res.status(500).json({ message: "no movie found", data: [] });
+        }
+      }
+      if (director) {
+        movies = movies.filter(
+          (m) =>
+            m.director &&
+            m.director.toLowerCase().includes(director.toLowerCase())
+        );
+        if (movies.length === 0) {
+          return res.status(500).json({ message: "no movie found", data: [] });
+        }
+      }
+
+      if (genre) {
+        const genres = genre.split(",").map((g) => g.toLowerCase());
+        movies = movies.filter(
+          (m) =>
+            Array.isArray(m.genre) &&
+            m.genre.find((g) => genres.includes(g.toLowerCase()))
+        );
+        if (movies.length === 0) {
+          return res.status(500).json({ message: "no movie found", data: [] });
+        }
+      }
+
+      if (year) {
+        movies = movies.filter(
+          (m) => m.year && m.year.toString().trim() === year.trim()
+        );
+        if (movies.length === 0) {
+          return res.status(500).json({ message: "no movie found", data: [] });
+        }
+      }
+
+      if (cast) {
+        const castNames = cast.split(",").map((c) => c.toLowerCase().trim());
+        movies = movies.filter(
+          (m) =>
+            Array.isArray(m.cast) &&
+            m.cast.find((c) =>
+              castNames.find((name) => c.toLowerCase().includes(name))
+            )
+        );
+        if (movies.length === 0) {
+          return res.status(500).json({ message: "no movie found" , data:[] });
+        }
+      }
+
+      if (by) {
+        if (order === "desc") {
+          movies.sort((a, b) => (a[by] > b[by] ? -1 : 1));
+        } else {
+          movies.sort((a, b) => (a[by] > b[by] ? 1 : -1));
+        }
+      }
+      res.json({ message: "all movies to watch", data: movies });
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+const moviesStats = (req, res) => {
   try {
     fs.readFile("movie.json", "utf-8", (err, data) => {
       if (err) {
@@ -27,83 +103,6 @@ const MoviesStats = (req, res) => {
   }
 };
 
-const AllMovies = (req, res) => {
-  try {
-    fs.readFile("movie.json", "utf-8", (err, data) => {
-      if (err) {
-        return res.status(500).json({ message: "Error reading data" });
-      }
-      let movies = JSON.parse(data);
-      const { title, director, genre, year, cast, duration, by, order } =
-        req.query;
-      if (title) {
-        movies = movies.filter(
-          (m) => m.title && m.title.toLowerCase().includes(title.toLowerCase())
-        );
-        if (movies.length === 0) {
-          return res.status(500).json({ message: "no movie found" });
-        }
-      }
-      if (director) {
-        movies = movies.filter(
-          (m) =>
-            m.director &&
-            m.director.toLowerCase().includes(director.toLowerCase())
-        );
-        if (movies.length === 0) {
-          return res.status(500).json({ message: "no movie found" });
-        }
-      }
-
-      if (genre) {
-        const genres = genre.split(",").map((g) => g.toLowerCase());
-        movies = movies.filter(
-          (m) =>
-            Array.isArray(m.genre) &&
-            m.genre.find((g) => genres.includes(g.toLowerCase()))
-        );
-        if (movies.length === 0) {
-          return res.status(500).json({ message: "no movie found" });
-        }
-      }
-
-      if (year) {
-        movies = movies.filter(
-          (m) => m.year && m.year.toString().trim() === year.trim()
-        );
-        if (movies.length === 0) {
-          return res.status(500).json({ message: "no movie found" });
-        }
-      }
-
-      if (cast) {
-        const castNames = cast.split(",").map((c) => c.toLowerCase().trim());
-        movies = movies.filter(
-          (m) =>
-            Array.isArray(m.cast) &&
-            m.cast.find((c) =>
-              castNames.find((name) => c.toLowerCase().includes(name))
-            )
-        );
-        if (movies.length === 0) {
-          return res.status(500).json({ message: "no movie found" });
-        }
-      }
-
-      if (by) {
-        if (order === "desc") {
-          movies.sort((a, b) => (a[by] > b[by] ? -1 : 1));
-        } else {
-          movies.sort((a, b) => (a[by] > b[by] ? 1 : -1));
-        }
-      }
-      res.json(movies);
-    });
-  } catch (error) {
-    console.log(error);
-  }
-};
-
 const topMovies = (req, res) => {
   try {
     fs.readFile("movie.json", "utf-8", (err, data) => {
@@ -111,20 +110,27 @@ const topMovies = (req, res) => {
         return res.status(500).json({ message: "Error reading data" });
       }
       let movies = JSON.parse(data);
+
       const n = parseInt(req.params.n);
       if (isNaN(n) || n <= 0) {
-        return res.status(400).json({ message: "Invalid number provided" });
+        return res
+          .status(400)
+          .json({ message: "Invalid number provided", data: [] });
+      }
+      const movie = movies.find((p) => p.id === n);
+      if (!movie) {
+        return res.status(404).json({ message: "id is invalid", data: [] });
       }
       movies.sort((a, b) => b.rating - a.rating);
       const top = movies.slice(0, n);
-      res.json(top);
+      res.json({ message: "top movies", data: top });
     });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
-const movieID = (req, res) => {
+const movieId = (req, res) => {
   try {
     const productsID = parseInt(req.params.id);
     fs.readFile("movie.json", "utf-8", (err, data) => {
@@ -136,7 +142,7 @@ const movieID = (req, res) => {
       if (!movie) {
         return res.status(404).json({ message: "No movie Found" });
       }
-      res.send(movie);
+      res.send({ message: "all movie ID", data: movie });
     });
   } catch (error) {
     console.log(error);
@@ -159,16 +165,30 @@ const newMovie = (req, res) => {
     ];
 
     const missingFields = requiredFields.filter((field) => !req.body[field]);
+    const bodyFields = Object.keys(req.body);
+    const invalidFields = bodyFields.filter(
+      (field) => !requiredFields.includes(field)
+    );
 
     if (missingFields.length > 0) {
       return res.status(400).json({
         message: `Missing required fields: ${missingFields.join(", ")}`,
       });
     }
+
+    if (invalidFields.length > 0) {
+      return res.status(400).json({
+        message: `Invalid fields provided: ${invalidFields.join(", ")}`,
+      });
+    }
+
     fs.readFile("movie.json", "utf-8", (err, data) => {
       if (err) {
-        return res.status(500).json({ message: "Error reading data" });
+        return res
+          .status(500)
+          .json({ message: "Error reading data", data: [] });
       }
+
       let newMovies = JSON.parse(data);
       const movieExists = newMovies.some(
         (m) =>
@@ -188,13 +208,15 @@ const newMovie = (req, res) => {
 
       fs.writeFile("movie.json", JSON.stringify(newMovies), (err) => {
         if (err) {
-          return res.status(500).json({ message: "Error saving movie" });
+          return res.status(500).json({ message: "Error saving movie data" });
         }
-        res.status(201).json({ message: "New movie added", data: movie });
+        res
+          .status(201)
+          .json({ message: "Movie added successfully!", data: movie });
       });
     });
   } catch (error) {
-    console.log(error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -225,7 +247,7 @@ const deleteMovie = (req, res) => {
   }
 };
 
-const AlldeleteMovie = (req, res) => {
+const alldeleteMovie = (req, res) => {
   try {
     fs.readFile("movie.json", "utf-8", (err, data) => {
       if (err) {
@@ -249,37 +271,49 @@ const AlldeleteMovie = (req, res) => {
 
 const patchMovie = (req, res) => {
   try {
+    const movieID = parseInt(req.params.id);
+
+    
+    if (req.body.id !== undefined) {
+      return res.status(400).json({
+        message: `Cannot include 'id' in PATCH request. `,
+      });
+    }
+
     fs.readFile("movie.json", "utf-8", (err, data) => {
       if (err) {
         return res.status(500).json({ message: "Error reading file" });
       }
+
       let movies = JSON.parse(data);
-      const movieID = parseInt(req.params.id);
       const movie = movies.find((m) => m.id === movieID);
+
       if (!movie) {
         return res.status(404).json({ message: "Movie not found" });
       }
-      if (req.body.title) movie.title = req.body.title;
-      if (req.body.director) movie.director = req.body.director;
-      if (req.body.year) movie.year = req.body.year;
-      if (req.body.genre) movie.genre = req.body.genre;
-      if (req.body.rating) movie.rating = req.body.rating;
-      if (req.body.duration) movie.duration = req.body.duration;
-      if (req.body.trailer) movie.trailer = req.body.trailer;
-      if (req.body.trailerThumbnail)
+
+      if (req.body.title !== undefined) movie.title = req.body.title;
+      if (req.body.director !== undefined) movie.director = req.body.director;
+      if (req.body.year !== undefined) movie.year = req.body.year;
+      if (req.body.genre !== undefined) movie.genre = req.body.genre;
+      if (req.body.rating !== undefined) movie.rating = req.body.rating;
+      if (req.body.duration !== undefined) movie.duration = req.body.duration;
+      if (req.body.trailer !== undefined) movie.trailer = req.body.trailer;
+      if (req.body.trailerThumbnail !== undefined)
         movie.trailerThumbnail = req.body.trailerThumbnail;
-      if (req.body.poster) movie.poster = req.body.poster;
-      if (req.body.cast) movie.cast = req.body.cast;
+      if (req.body.poster !== undefined) movie.poster = req.body.poster;
+      if (req.body.cast !== undefined) movie.cast = req.body.cast;
 
       fs.writeFile("movie.json", JSON.stringify(movies, null, 2), (err) => {
         if (err) {
           return res.status(500).json({ message: "Error writing file" });
         }
-        res.json(movie);
+
+        res.json({ message: "Movie successfully updated", data: movie });
       });
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -302,7 +336,17 @@ const completeMovie = (req, res) => {
     const missingFields = requiredFields.filter((field) => !req.body[field]);
     if (missingFields.length > 0) {
       return res.status(400).json({
-        message: `Missing required fields: ${missingFields.join(", ")}`,
+        message: `Missing required fields: ${missingFields.join(", ")}`, data:[]
+      });
+    }
+
+    const bodyFields = Object.keys(req.body);
+    const invalidFields = bodyFields.filter(
+      (field) => !requiredFields.includes(field)
+    );
+    if (invalidFields.length > 0) {
+      return res.status(400).json({
+        message: `Invalid fields provided: ${invalidFields.join(", ")}`,
       });
     }
     fs.readFile("movie.json", "utf-8", (err, data) => {
@@ -321,7 +365,10 @@ const completeMovie = (req, res) => {
           return res.status(500).json({ message: "Error writing file" });
         }
 
-        res.json(movies[index]);
+        res.json({
+          message: "movie fields successfully updated",
+          data: movies[index],
+        });
       });
     });
   } catch (error) {
@@ -331,13 +378,13 @@ const completeMovie = (req, res) => {
 };
 
 module.exports = {
-  MoviesStats,
-  AllMovies,
+  moviesStats,
+  allMovies,
   topMovies,
-  movieID,
+  movieId,
   newMovie,
   deleteMovie,
-  AlldeleteMovie,
+  alldeleteMovie,
   patchMovie,
   completeMovie,
 };

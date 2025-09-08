@@ -1,28 +1,25 @@
 const express = require("express");
 const {
-  MoviesStats,
-  AllMovies,
+  allMovies,
   topMovies,
-  // totalMovies,
-  movieID,
+  moviesStats,
+  movieId,
   newMovie,
   deleteMovie,
-  AlldeleteMovie,
+  alldeleteMovie,
   patchMovie,
   completeMovie,
-  // getAverageRating,
 } = require("./../moviesController/movies");
 const router = express.Router();
 
-router.get("/", AllMovies);
+router.get("/", allMovies);
+router.get("/sort" , allMovies)
 router.get("/top/:n", topMovies);
-// router.get("/:average-rating", getAverageRating);
-// router.get("/totalMovies", totalMovies);
-router.get("/stats", MoviesStats);
-router.get("/:id", movieID);
+router.get("/stats", moviesStats);
+router.get("/:id", movieId);
 router.post("/", newMovie);
 router.delete("/:id", deleteMovie);
-router.delete("/", AlldeleteMovie);
+router.delete("/", alldeleteMovie);
 router.patch("/:id", patchMovie);
 router.put("/:id", completeMovie);
 
