@@ -5,7 +5,10 @@ const app = express();
 const bodyParser = require("body-parser");
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: [
+      "http://localhost:5173", // for local dev
+      "https://fronted-movie-app.vercel.app", // for deployed frontend
+    ],
   })
 );
 app.use(bodyParser.json());
