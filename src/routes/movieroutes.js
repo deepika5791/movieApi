@@ -13,7 +13,7 @@ const {
 const router = express.Router();
 
 router.get("/", allMovies);
-router.get("/sort" , allMovies)
+router.get("/sort", allMovies);
 router.get("/top/:n", topMovies);
 router.get("/stats", moviesStats);
 router.get("/:id", movieId);
