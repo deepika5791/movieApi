@@ -91,7 +91,6 @@ const moviesStats = async (req, res) => {
     let totalMovies = movies.length;
 
     const maxDuration = Math.max(...movies.map((m) => m.duration));
-    movies = movies.filter((m) => m.duration === maxDuration);
 
     const totalRating = movies.reduce(
       (sum, movie) => sum + (movie.rating || 0),
