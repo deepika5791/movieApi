@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+
 const movieSchema = new mongoose.Schema({
   title: { type: String, required: true },
   director: [String],
@@ -16,24 +17,28 @@ const Movie = mongoose.model("Movie", movieSchema);
 
 const allMovies = async (req, res) => {
   try {
-    const movies = await Movie.find();
+    let movies = await Movie.find();
     const { title, director, year, genre, cast, by, order } = req.query;
+
     if (title) {
       movies = movies.filter(
         (m) => m.title && m.title.toLowerCase().includes(title.toLowerCase())
       );
       if (movies.length === 0) {
-        return res.status(500).json({ message: "no movie found", data: [] });
+        return res.status(404).json({ message: "no movie found", data: [] });
       }
     }
+
     if (director) {
       movies = movies.filter(
         (m) =>
-          m.director &&
-          m.director.toLowerCase().includes(director.toLowerCase())
+          Array.isArray(m.director) &&
+          m.director.find((d) =>
+            d.toLowerCase().includes(director.toLowerCase())
+          )
       );
       if (movies.length === 0) {
-        return res.status(500).json({ message: "no movie found", data: [] });
+        return res.status(404).json({ message: "no movie found", data: [] });
       }
     }
 
@@ -45,7 +50,7 @@ const allMovies = async (req, res) => {
           m.genre.find((g) => genres.includes(g.toLowerCase()))
       );
       if (movies.length === 0) {
-        return res.status(500).json({ message: "no movie found", data: [] });
+        return res.status(404).json({ message: "no movie found", data: [] });
       }
     }
 
@@ -54,7 +59,7 @@ const allMovies = async (req, res) => {
         (m) => m.year && m.year.toString().trim() === year.trim()
       );
       if (movies.length === 0) {
-        return res.status(500).json({ message: "no movie found", data: [] });
+        return res.status(404).json({ message: "no movie found", data: [] });
       }
     }
 
@@ -64,11 +69,11 @@ const allMovies = async (req, res) => {
         (m) =>
           Array.isArray(m.cast) &&
           m.cast.find((c) =>
-            castNames.find((name) => c.toLowerCase().includes(name))
+            castNames.some((name) => c.toLowerCase().includes(name))
           )
       );
       if (movies.length === 0) {
-        return res.status(500).json({ message: "no movie found", data: [] });
+        return res.status(404).json({ message: "no movie found", data: [] });
       }
     }
 
@@ -79,6 +84,7 @@ const allMovies = async (req, res) => {
         movies.sort((a, b) => (a[by] > b[by] ? 1 : -1));
       }
     }
+
     res.json({ message: "all movies to watch", data: movies });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -90,13 +96,14 @@ const moviesStats = async (req, res) => {
     const movies = await Movie.find();
     let totalMovies = movies.length;
 
-    const maxDuration = Math.max(...movies.map((m) => m.duration));
+    const maxDuration = Math.max(...movies.map((m) => m.duration || 0));
 
     const totalRating = movies.reduce(
       (sum, movie) => sum + (movie.rating || 0),
       0
     );
-    const avgRating = totalRating / movies.length;
+    const avgRating = movies.length ? totalRating / movies.length : 0;
+
     res.json({
       averageRating: avgRating.toFixed(2),
       totalMovies,
@@ -111,11 +118,11 @@ const topMovies = async (req, res) => {
   try {
     const n = parseInt(req.params.n);
     if (isNaN(n) || n <= 0) {
-      return res.status(404).json({ message: "id is invalid", data: [] });
+      return res.status(400).json({ message: "invalid number", data: [] });
     }
-    const movies = await Movie.find.sort({ rating: -1 }).limit(n);
+    const movies = await Movie.find().sort({ rating: -1 }).limit(n);
     res.json({ message: "top movies", data: movies });
-  } catch {
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
@@ -125,16 +132,17 @@ const movieId = async (req, res) => {
     const movie = await Movie.findById(req.params.id);
     if (!movie) return res.status(404).json({ message: "No movie Found" });
     res.json({ message: "all movie ID", data: movie });
-  } catch {
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 const newMovie = async (req, res) => {
   try {
     const movie = new Movie(req.body);
     await movie.save();
     res.status(201).json({ message: "Movie added successfully", data: movie });
-  } catch {
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
@@ -143,39 +151,41 @@ const deleteMovie = async (req, res) => {
   try {
     const movie = await Movie.findByIdAndDelete(req.params.id);
     if (!movie) return res.status(404).json({ message: "No movie Found" });
-    res.json({ message: "all movie ID", data: movie });
-  } catch {
+    res.json({ message: "movie deleted successfully", data: movie });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
 const alldeleteMovie = async (req, res) => {
   try {
-    const movie = await Movie.deleteMany({});
+    const result = await Movie.deleteMany({});
     res.json({
-      message: "all movie deleted successful",
+      message: "all movies deleted successfully",
       deleted: result.deletedCount,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 const patchMovie = async (req, res) => {
   try {
     if (req.body.id !== undefined) {
       return res
         .status(400)
-        .json({ message: "Connot include 'id' in PATCH request " });
+        .json({ message: "Cannot include 'id' in PATCH request " });
     }
     const movie = await Movie.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
     });
     if (!movie) return res.status(404).json({ message: "Movie not found" });
     res.json({ message: "Movie successfully updated", data: movie });
-  } catch {
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 const completeMovie = async (req, res) => {
   try {
     const requiredFields = [
@@ -202,10 +212,11 @@ const completeMovie = async (req, res) => {
     });
     if (!movie) return res.status(404).json({ message: "Movie not found" });
     res.json({ message: "Movie successfully updated", data: movie });
-  } catch {
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 module.exports = {
   Movie,
   moviesStats,
