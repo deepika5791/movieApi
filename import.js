@@ -1,6 +1,6 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
-const { Movie } = require("./src/moviesController/movies");
+const Movie = require("./src/models/models");
 const data = require("./movie.json");
 mongoose
   .connect(process.env.MONGO_URI)

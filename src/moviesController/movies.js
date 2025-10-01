@@ -1,20 +1,4 @@
-const mongoose = require("mongoose");
-
-const movieSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  director: [String],
-  year: Number,
-  genre: [String],
-  rating: Number,
-  duration: Number,
-  trailer: String,
-  trailerThumbnail: String,
-  poster: String,
-  cast: [String],
-});
-
-const Movie = mongoose.model("Movie", movieSchema);
-
+const Movie = require("../models/models");
 const allMovies = async (req, res) => {
   try {
     let movies = await Movie.find();
