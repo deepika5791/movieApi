@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const { Movie } = require("../moviesController/movies");
 
 const movieSchema = new mongoose.Schema({
   title: { type: String, required: true },
